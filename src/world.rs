@@ -16,6 +16,10 @@ impl World {
         }
     }
 
+    pub(self) fn is_in_range(self: &World, x: usize, y: usize) -> bool {
+        return x < self.x && y < self.y;
+    }
+
     pub fn set_state(self: &mut World, new_state: State, x: usize, y: usize) {
         match (&self.data[y][x], &new_state)
         {
@@ -33,7 +37,7 @@ impl World {
     }
 
     pub fn read_state(self: &World, x: usize, y: usize) -> &State {
-        if x < self.x && y < self.y {
+        if self.is_in_range(x, y) {
             return &self.data[y][x];
         }
         else {
