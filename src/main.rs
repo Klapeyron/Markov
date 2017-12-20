@@ -13,41 +13,23 @@ impl World {
             y: ysize
         }
     }
-    pub fn set_state(self: &mut World, state: Field, x: usize, y: usize) {
+    pub fn set_state(self: &mut World, new_state: Field, x: usize, y: usize) {
         let x_index = x - 1;
         let y_index = self.y - y;
 
-        match state {
-            Field::NormalState(_) => match self.data[y_index][x_index] {
-                Field::NormalState(_) =>
-                {
-                    println!("Updated value {:?} (S) at [{}][{}] from {:?}", state, x, y, self.data[y_index][x_index]);
-                    self.data[y_index][x_index] = state;
-                },
-                _ => {
-                    panic!("Invalid operation {:?} on position [{}][{}]", state, x, y);
-                }
-            },
-            Field::TerminalState(value) if self.data[y_index][x_index] == Field::NormalState(0.0)  => {
-                println!("Created {:?} (T) on position [{}][{}] with value {}", state, x, y, value);
-                self.data[y_index][x_index] = state;
-            },
-            Field::SpecialState => if self.data[y_index][x_index] == Field::NormalState(0.0) {
-                println!("Created {:?} (B) on position [{}][{}]", state, x, y);
-                self.data[y_index][x_index] = state;
-            },
-            Field::ProhibitedState => if self.data[y_index][x_index] == Field::NormalState(0.0) {
-                println!("Created {:?} (F) on position [{}][{}]", state, x, y);
-                self.data[y_index][x_index] = state;
-            },
-            Field::StartState => if self.data[y_index][x_index] == Field::NormalState(0.0) {
-                println!("Created {:?} (S) on position [{}][{}]", state, x, y);
-                self.data[y_index][x_index] = state;
+        match (&self.data[y_index][x_index], &new_state)
+        {
+            (&Field::NormalState(_), &Field::NormalState(_)) => {
+                println!("Updated value {:?} at [{}][{}] from {:?}", &new_state, x, y, &self.data[y_index][x_index]);
+            }
+            (&Field::NormalState(_), _) => {
+                println!("Created {:?} on position [{}][{}]", &new_state, x, y);
             }
             _ => {
-                panic!("Invalid operation {:?} on position [{}][{}]", state, x, y);
+                panic!("Invalid operation {:?} on position [{}][{}]", new_state, x, y);
             }
         }
+        self.data[y_index][x_index] = new_state;
     }
     pub fn read_state(self: &World, x: usize, y: usize) -> &Field {
         return &self.data[self.y - y][x-1];
@@ -118,6 +100,15 @@ fn not_allow_normal_state_update_from_different_type() {
 
     world.set_state(Field::ProhibitedState, 1, 1);
     world.set_state(Field::NormalState(4.2), 1, 1);
+}
+
+#[test]
+#[should_panic]
+fn not_allow_immutable_state_update() {
+    let mut world: World = World::new(4, 3);
+
+    world.set_state(Field::StartState, 1, 1);
+    world.set_state(Field::StartState, 1, 1);
 }
 
 #[test]
