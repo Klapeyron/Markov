@@ -44,7 +44,7 @@ impl World {
     pub fn walk(self: &World, predicate: &mut FnMut(&State, usize, usize)) {
         for (x, row) in self.data.iter().enumerate() {
             for (y, column) in row.iter().enumerate() {
-                predicate(column, x+1, y+1);
+                predicate(column, x, y);
             }
         }
     }
