@@ -20,7 +20,7 @@ impl World {
         match (&self.data[y_index][x_index], &new_state)
         {
             (&Field::NormalState(_), &Field::NormalState(_)) => {
-                println!("Updated value {:?} at [{}][{}] from {:?}", &new_state, x, y, &self.data[y_index][x_index]);
+                println!("Updated value at [{}][{}] from {:?} to {:?}", x, y, &self.data[y_index][x_index], &new_state);
             }
             (&Field::NormalState(_), _) => {
                 println!("Created {:?} on position [{}][{}]", &new_state, x, y);
