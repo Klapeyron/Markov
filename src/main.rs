@@ -32,7 +32,14 @@ impl World {
         self.data[y_index][x_index] = new_state;
     }
     pub fn read_state(self: &World, x: usize, y: usize) -> &Field {
-        return &self.data[self.y - y][x-1];
+        return &self.data[self.y-y][x-1];
+    }
+    pub fn walk(self: &World, predicate: &mut FnMut(&Field, usize, usize)) {
+        for (x, row) in self.data.iter().enumerate() {
+            for (y, column) in row.iter().enumerate() {
+                predicate(column, x+1, y+1);
+            }
+        }
     }
 }
 
@@ -43,6 +50,10 @@ enum Field {
     TerminalState(f64),
     SpecialState,
     NormalState(f64)
+}
+
+fn evaluate(world: &mut World, world_x: usize, world_y: usize){
+    world.set_state(Field::TerminalState(1.0), 4, 3);
 }
 
 fn main() {
@@ -152,4 +163,19 @@ fn panic_if_inserted_out_of_range_x_range() {
 fn panic_if_inserted_out_of_range_y_range() {
     let mut world: World = World::new(4, 3);
     world.set_state(Field::StartState, 4, 4);
+}
+
+#[test]
+fn walk_through_all_fields() {
+    let world: World = World::new(4, 3);
+    let mut numberOfCalls = 0;
+
+    let mut walk_predicate = |field: &Field, x: usize, y: usize|
+    {
+        numberOfCalls += 1;
+        println!("Iterating over {} {}", x, y);
+    };
+
+    world.walk(&mut walk_predicate);
+    // assert_eq!(4*3, numberOfCalls);
 }
