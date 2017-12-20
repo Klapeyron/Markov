@@ -84,10 +84,10 @@ fn evaluate(world: &mut World, x: usize, y: usize){
 fn main() {
     let mut world: World = World::new(4, 3);
 
-    world.set_state(State::StartState, 1, 1);
-    world.set_state(State::ProhibitedState, 2, 2);
-    world.set_state(State::TerminalState(1.0), 4, 3);
-    world.set_state(State::TerminalState(-1.0), 4, 2);
+    world.set_state(State::StartState, 0, 2);
+    world.set_state(State::ProhibitedState, 1, 1);
+    world.set_state(State::TerminalState(1.0), 3, 0);
+    world.set_state(State::TerminalState(-1.0), 3, 1);
 
     println!("Hello, {:#?}", world);
 }
@@ -136,14 +136,14 @@ fn not_allow_immutable_state_update() {
 fn prepare_standard_world() {
     let mut world: World = World::new(4, 3);
 
-    world.set_state(State::StartState, 0, 0);
+    world.set_state(State::StartState, 0, 2);
     world.set_state(State::ProhibitedState, 1, 1);
-    world.set_state(State::TerminalState(1.0), 3, 2);
+    world.set_state(State::TerminalState(1.0), 3, 0);
     world.set_state(State::TerminalState(-1.0), 3, 1);
 
-    assert_eq!(&State::StartState, world.read_state(0,0));
+    assert_eq!(&State::StartState, world.read_state(0,2));
     assert_eq!(&State::ProhibitedState, world.read_state(1,1));
-    assert_eq!(&State::TerminalState(1.0), world.read_state(3,2));
+    assert_eq!(&State::TerminalState(1.0), world.read_state(3,0));
     assert_eq!(&State::TerminalState(-1.0), world.read_state(3,1));
 }
 
