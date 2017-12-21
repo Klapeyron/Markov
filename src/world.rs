@@ -20,7 +20,10 @@ impl World {
         return x < self.x && y < self.y;
     }
 
-    pub fn set_state(self: &mut World, new_state: State, x: usize, y: usize) {
+    pub fn set_state(self: &mut World, new_state: State, x: usize, y: usize) -> bool {
+        if (!self.is_in_range(x, y)) {
+            return false;
+        }
         match (&self.data[y][x], &new_state)
         {
             (&State::NormalState(_), &State::NormalState(_)) => {
@@ -30,10 +33,12 @@ impl World {
                 println!("Created {:?} on position [{}][{}]", &new_state, x, y);
             }
             _ => {
-                panic!("Invalid operation {:?} on position [{}][{}]", new_state, x, y);
+                println!("Invalid operation {:?} on position [{}][{}]", new_state, x, y);
+                return false;
             }
         }
         self.data[y][x] = new_state;
+        return true;
     }
 
     pub fn read_state(self: &World, x: usize, y: usize) -> &State {
@@ -59,7 +64,7 @@ pub enum State {
     ProhibitedState,
     StartState,
     TerminalState(f64),
-    SpecialState,
+    SpecialState(f64),
     NormalState(f64)
 }
 
@@ -86,21 +91,19 @@ fn update_normal_state() {
 }
 
 #[test]
-#[should_panic]
 fn not_allow_normal_state_update_from_different_type() {
     let mut world: World = World::new(4, 3);
 
-    world.set_state(State::ProhibitedState, 1, 1);
-    world.set_state(State::NormalState(4.2), 1, 1);
+    assert_eq!(true, world.set_state(State::ProhibitedState, 1, 1));
+    assert_eq!(false, world.set_state(State::NormalState(4.2), 1, 1));
 }
 
 #[test]
-#[should_panic]
 fn not_allow_immutable_state_update() {
     let mut world: World = World::new(4, 3);
 
-    world.set_state(State::StartState, 1, 1);
-    world.set_state(State::StartState, 1, 1);
+    assert_eq!(true, world.set_state(State::StartState, 1, 1));
+    assert_eq!(false, world.set_state(State::StartState, 1, 1));
 }
 
 #[test]
@@ -127,17 +130,15 @@ fn return_prohibited_state_if_accessed_out_of_range() {
 }
 
 #[test]
-#[should_panic]
 fn panic_if_inserted_out_of_range_x_range() {
     let mut world: World = World::new(4, 3);
-    world.set_state(State::StartState, 5, 3);
+    assert_eq!(false, world.set_state(State::StartState, 5, 3));
 }
 
 #[test]
-#[should_panic]
 fn panic_if_inserted_out_of_range_y_range() {
     let mut world: World = World::new(4, 3);
-    world.set_state(State::StartState, 4, 4);
+    assert_eq!(false, world.set_state(State::StartState, 4, 4));
 }
 
 #[test]
