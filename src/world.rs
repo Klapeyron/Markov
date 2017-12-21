@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct World {
     data: Vec<Vec<State>>,
     x: usize,
@@ -21,9 +21,10 @@ impl World {
     }
 
     pub fn set_state(self: &mut World, new_state: State, x: usize, y: usize) -> bool {
-        if (!self.is_in_range(x, y)) {
+        if !self.is_in_range(x, y) {
             return false;
         }
+
         match (&self.data[y][x], &new_state)
         {
             (&State::NormalState(_), &State::NormalState(_)) => {
@@ -37,6 +38,7 @@ impl World {
                 return false;
             }
         }
+
         self.data[y][x] = new_state;
         return true;
     }
@@ -50,12 +52,8 @@ impl World {
         }
     }
 
-    pub fn walk(self: &World, predicate: &mut FnMut(&State, usize, usize)) {
-        for (x, row) in self.data.iter().enumerate() {
-            for (y, column) in row.iter().enumerate() {
-                predicate(column, x, y);
-            }
-        }
+    pub fn matrix(self: &World) -> &Vec<Vec<State>> {
+        &self.data
     }
 }
 
@@ -146,12 +144,11 @@ fn walk_through_all_fields() {
     let world: World = World::new(4, 3);
     let mut numberOfCalls = 0;
 
-    let mut walk_predicate = |_field: &State, x: usize, y: usize|
-    {
-        numberOfCalls += 1;
-        println!("Iterating over {} {}", x, y);
-    };
+    for (x, row) in world.matrix().iter().enumerate() {
+        for (y, column) in row.iter().enumerate() {
+            numberOfCalls += 1;
+        }
+    }
 
-    world.walk(&mut walk_predicate);
-    // assert_eq!(4*3, numberOfCalls);
+    assert_eq!(4*3, numberOfCalls);
 }
