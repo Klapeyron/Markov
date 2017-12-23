@@ -148,8 +148,7 @@ impl Markov {
 
         // // TODO: calculate result
         let reward = State::to_reward(&Some(state));
-        let result = // reward +
-            self.gama*max + self.cost_of_move;
+        let result = reward + self.gama*max + self.cost_of_move;
 
         // TODO: logic of state changes, skiping invalid
         let value_to_state = |state: &State, new_value: f64| -> State {
@@ -296,6 +295,22 @@ fn calculate_evaluation_of_action() {
     assert_eq!(7.7, markov.evaluate_action(field, &Action::Up,  1, 1).round_to(3));
     assert_eq!(5.1, markov.evaluate_action(field, &Action::Left,  1, 1).round_to(3));
     assert_eq!(-5.3, markov.evaluate_action(field, &Action::Right,  1, 1).round_to(3));
+}
+
+#[test]
+fn evaluate_sample_from_slides() {
+    // example from slide 17 at http://ais.informatik.uni-freiburg.de/teaching/ss03/ams/DecisionProblems.pdf
+    let mut markov = Markov::new();
+
+    markov.world.set_state(State::NormalState(1.0), 1, 1);
+    markov.world.set_state(State::NormalState(1.0), 1, 2);
+    markov.world.set_state(State::NormalState(5.0), 0, 1);
+    markov.world.set_state(State::NormalState(-8.0), 2, 1);
+    markov.world.set_state(State::NormalState(10.0), 1, 0);
+
+    markov.evaluate();
+
+    assert_eq!(&State::NormalState(8.66), markov.world.read_state(1,1).unwrap());
 }
 
 #[test]
