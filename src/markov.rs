@@ -159,7 +159,7 @@ impl Markov {
         // (value_to_state(state, result), Action::Left) // TODO: remove hardcoded optimal action
     }
 
-    pub fn evaluate(self: &Markov) -> matrix::Matrix<State> {
+    pub fn evaluate(self: &mut Markov) {
         // TODO: create copy of the world
         let mut new_world = self.world.clone();
 
@@ -171,7 +171,7 @@ impl Markov {
             }
         }
 
-        return new_world;
+        self.world = new_world;
 
         // U(s) = R(s) + gama max{T(s,a,s')U(s')}
 
@@ -290,32 +290,36 @@ fn calculate_evaluation_of_action() {
     assert_eq!(-5.3, markov.evaluate_action(field, &Action::Right,  1, 1).round_to(3));
 }
 
-// #[test]
-// fn calculate_standard_world() {
-//     let mut markov = Markov::new();
+#[test]
+#[ignore]
+fn calculate_standard_world() {
+    let mut markov = Markov::new();
 
-//     markov.world.set_state(State::StartState(0.0), 0, 2);
-//     markov.world.set_state(State::ProhibitedState, 1, 1);
-//     markov.world.set_state(State::TerminalState(1.0), 3, 0);
-//     markov.world.set_state(State::TerminalState(-1.0), 3, 1);
+    markov.world.set_state(State::StartState(0.0), 0, 2);
+    markov.world.set_state(State::ProhibitedState, 1, 1);
+    markov.world.set_state(State::TerminalState(1.0), 3, 0);
+    markov.world.set_state(State::TerminalState(-1.0), 3, 1);
 
-//     markov.evaluate();
+    // after ~20 iterations should converge to fast zero error
+    for _ in 0..30 {
+        markov.evaluate();
+    }
 
-//     assert_eq!(Some(&State::NormalState(0.812)), markov.world.read_state(0,0));
-//     assert_eq!(Some(&State::NormalState(0.868)), markov.world.read_state(1,0));
-//     assert_eq!(Some(&State::NormalState(0.912)), markov.world.read_state(2,0));
-//     assert_eq!(Some(&State::TerminalState(1.0)), markov.world.read_state(3,0));
+    assert_eq!(Some(&State::NormalState(0.812)), markov.world.read_state(0,0));
+    assert_eq!(Some(&State::NormalState(0.868)), markov.world.read_state(1,0));
+    assert_eq!(Some(&State::NormalState(0.912)), markov.world.read_state(2,0));
+    assert_eq!(Some(&State::TerminalState(1.0)), markov.world.read_state(3,0));
 
-//     assert_eq!(Some(&State::NormalState(0.762)), markov.world.read_state(0,1));
-//     assert_eq!(Some(&State::ProhibitedState), markov.world.read_state(1,1));
-//     assert_eq!(Some(&State::NormalState(0.660)), markov.world.read_state(2,1));
-//     assert_eq!(Some(&State::TerminalState(-1.0)), markov.world.read_state(3,1));
+    assert_eq!(Some(&State::NormalState(0.762)), markov.world.read_state(0,1));
+    assert_eq!(Some(&State::ProhibitedState), markov.world.read_state(1,1));
+    assert_eq!(Some(&State::NormalState(0.660)), markov.world.read_state(2,1));
+    assert_eq!(Some(&State::TerminalState(-1.0)), markov.world.read_state(3,1));
 
-//     assert_eq!(Some(&State::StartState(0.705)), markov.world.read_state(0,2));
-//     assert_eq!(Some(&State::NormalState(0.655)), markov.world.read_state(1,2));
-//     assert_eq!(Some(&State::NormalState(0.611)), markov.world.read_state(2,2));
-//     assert_eq!(Some(&State::NormalState(0.388)), markov.world.read_state(3,2));
-// }
+    assert_eq!(Some(&State::StartState(0.705)), markov.world.read_state(0,2));
+    assert_eq!(Some(&State::NormalState(0.655)), markov.world.read_state(1,2));
+    assert_eq!(Some(&State::NormalState(0.611)), markov.world.read_state(2,2));
+    assert_eq!(Some(&State::NormalState(0.388)), markov.world.read_state(3,2));
+}
 
 #[test]
 fn update_normal_state() {
