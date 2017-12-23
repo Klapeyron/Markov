@@ -85,16 +85,12 @@ impl Markov {
     }
 
     fn state_after_action(self: &Markov, action: &Action, x: usize, y: usize) -> &State {
-        let position_after_action = |action: &Action, x: usize, y: usize| -> (Option<usize>, Option<usize>) {
-            match action {
-                &Action::Left => (x.checked_sub(1), Some(y)),
-                &Action::Right => (x.checked_add(1), Some(y)),
-                &Action::Up => (Some(x), y.checked_sub(1)),
-                &Action::Down => (Some(x), y.checked_add(1))
-            }
+        let (maybe_x, maybe_y) = match action {
+            &Action::Left => (x.checked_sub(1), Some(y)),
+            &Action::Right => (x.checked_add(1), Some(y)),
+            &Action::Up => (Some(x), y.checked_sub(1)),
+            &Action::Down => (Some(x), y.checked_add(1))
         };
-
-        let (maybe_x, maybe_y) = position_after_action(&action, x, y);
 
         match (maybe_x, maybe_y) {
             (Some(_), Some(_)) => {
@@ -111,7 +107,7 @@ impl Markov {
         }
     }
 
-    fn evaluate_action(self: &Markov, state: &State, action: &Action, x: usize, y: usize) -> (f64) {
+    fn evaluate_action(self: &Markov, action: &Action, x: usize, y: usize) -> (f64) {
         let forward_state  = self.state_after_action(action, x, y);
         let left_state     = self.state_after_action(&left_operation(action), x, y);
         let right_state    = self.state_after_action(&right_operation(action), x, y);
@@ -142,26 +138,24 @@ impl Markov {
             _ => {}
         }
 
-        let up_reward    = self.evaluate_action(&state, &Action::Up,    x, y);
-        let left_reward  = self.evaluate_action(&state, &Action::Left,  x, y);
-        let right_reward = self.evaluate_action(&state, &Action::Right, x, y);
-        let down_reward  = self.evaluate_action(&state, &Action::Down,  x, y);
+        let up_reward    = self.evaluate_action(&Action::Up, x, y);
+        let left_reward  = self.evaluate_action(&Action::Left, x, y);
+        let right_reward = self.evaluate_action(&Action::Right, x, y);
+        let down_reward  = self.evaluate_action(&Action::Down, x, y);
 
         let max = up_reward.max(left_reward.max(right_reward.max(down_reward)));
 
         let result = max*self.gama + self.cost_of_move;
 
-        let value_to_state = |state: &State, new_value: f64| -> State {
-            match state {
-                &State::ProhibitedState => State::ProhibitedState,
-                &State::StartState(value) => State::StartState(new_value),
-                &State::NormalState(value) => State::NormalState(new_value),
-                &State::TerminalState(value) => State::TerminalState(new_value),
-                &State::SpecialState(value) => State::SpecialState(new_value)
-            }
+        let updated_state = match state {
+            &State::ProhibitedState => State::ProhibitedState,
+            &State::StartState(_) => State::StartState(result),
+            &State::NormalState(_) => State::NormalState(result),
+            &State::TerminalState(_) => State::TerminalState(result),
+            &State::SpecialState(_) => State::SpecialState(result)
         };
 
-        (value_to_state(state, result), Action::Left) // TODO: remove hardcoded optimal action
+        (updated_state, Action::Left) // TODO: remove hardcoded optimal action
     }
 
     pub fn evaluate(self: &mut Markov) {
@@ -274,11 +268,10 @@ fn calculate_evaluation_of_action() {
     markov.world.set_state(State::NormalState(-8.0), 2, 1);
     markov.world.set_state(State::NormalState(10.0), 1, 0);
 
-    let field = &markov.world.read_state(1,1).unwrap();
-    assert_eq!(0.5, markov.evaluate_action(field, &Action::Down,  1,1).round_to(3));
-    assert_eq!(7.7, markov.evaluate_action(field, &Action::Up,  1, 1).round_to(3));
-    assert_eq!(5.1, markov.evaluate_action(field, &Action::Left,  1, 1).round_to(3));
-    assert_eq!(-5.3, markov.evaluate_action(field, &Action::Right,  1, 1).round_to(3));
+    assert_eq!(0.5, markov.evaluate_action(&Action::Down, 1, 1).round_to(3));
+    assert_eq!(7.7, markov.evaluate_action(&Action::Up, 1, 1).round_to(3));
+    assert_eq!(5.1, markov.evaluate_action(&Action::Left, 1, 1).round_to(3));
+    assert_eq!(-5.3, markov.evaluate_action(&Action::Right, 1, 1).round_to(3));
 }
 
 #[test]
@@ -325,18 +318,20 @@ fn update_normal_state() {
     assert_eq!(Some(&State::NormalState(6.6)), markov.world.read_state(1,1));
 }
 
-// #[test]
-// fn not_allow_normal_state_update_from_different_type() {
-//     let mut world = matrix::Matrix::new(State::NormalState(0.0), 4, 3);
+#[test]
+#[ignore]
+fn not_allow_normal_state_update_from_different_type() {
+    let mut world = matrix::Matrix::new(State::NormalState(0.0), 4, 3);
 
-//     assert_eq!(true, world.set_state(State::ProhibitedState, 1, 1));
-//     assert_eq!(false, world.set_state(State::NormalState(4.2), 1, 1));
-// }
+    assert_eq!(true, world.set_state(State::ProhibitedState, 1, 1));
+    assert_eq!(false, world.set_state(State::NormalState(4.2), 1, 1));
+}
 
-// #[test]
-// fn not_allow_immutable_state_update() {
-//     let mut world = matrix::Matrix::new(State::NormalState(0.0), 4, 3);
+#[test]
+#[ignore]
+fn not_allow_immutable_state_update() {
+    let mut world = matrix::Matrix::new(State::NormalState(0.0), 4, 3);
 
-//     assert_eq!(true, world.set_state(State::StartState(0.0), 1, 1));
-//     assert_eq!(false, world.set_state(State::StartState(0.0), 1, 1));
-// }
+    assert_eq!(true, world.set_state(State::StartState(0.0), 1, 1));
+    assert_eq!(false, world.set_state(State::StartState(0.0), 1, 1));
+}

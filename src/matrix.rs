@@ -1,5 +1,4 @@
 use std::clone::Clone;
-use std::fmt;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Matrix<T> {
@@ -47,7 +46,7 @@ impl<T> Matrix<T> {
 
 #[test]
 fn correct_size() {
-    let mut world: Matrix<u64> = Matrix::new(666, 4, 3);
+    let world: Matrix<u64> = Matrix::new(666, 4, 3);
 
     assert_eq!(4, world.x);
     assert_eq!(3, world.y);
