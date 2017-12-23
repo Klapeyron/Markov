@@ -130,7 +130,7 @@ impl Markov {
         let max = up_reward.max(left_reward.max(right_reward.max(down_reward)));
 
         // // TODO: calculate result
-        let result = elem + self.gama*max - self.cost_of_move;
+        // let result = elem + self.gama*max - self.cost_of_move;
 
         // TODO: logic of state changes, skiping invalid
 
@@ -144,7 +144,8 @@ impl Markov {
             }
         };
 
-        (value_to_state(state, result), Action::Left) // TODO: remove hardcoded optimal action
+        (state.clone(), Action::Left)
+        // (value_to_state(state, result), Action::Left) // TODO: remove hardcoded optimal action
     }
 
     pub fn evaluate(self: &Markov) -> matrix::Matrix<State> {
