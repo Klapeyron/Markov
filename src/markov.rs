@@ -282,7 +282,6 @@ fn calculate_evaluation_of_action() {
 }
 
 #[test]
-// #[ignore]
 fn calculate_standard_world() {
     // example from slide 4 at http://sequoia.ict.pwr.wroc.pl/~witold/ai/aie_rlearn_s.pdf
     let mut markov = Markov::new();
@@ -300,16 +299,16 @@ fn calculate_standard_world() {
     assert_eq!(Some(&State::NormalState(0.8115582189599785)), markov.world.read_state(0,0));
     assert_eq!(Some(&State::NormalState(0.8678082191773653)), markov.world.read_state(1,0));
     assert_eq!(Some(&State::NormalState(0.9178082191779183)), markov.world.read_state(2,0));
-    assert_eq!(Some(&State::TerminalState(1.0)), markov.world.read_state(3,0));
+    assert_eq!(Some(&State::TerminalState(1.0)),              markov.world.read_state(3,0));
 
     assert_eq!(Some(&State::NormalState(0.7615582184462935)), markov.world.read_state(0,1));
-    assert_eq!(Some(&State::ProhibitedState), markov.world.read_state(1,1));
+    assert_eq!(Some(&State::ProhibitedState),                 markov.world.read_state(1,1));
     assert_eq!(Some(&State::NormalState(0.6602739726022764)), markov.world.read_state(2,1));
-    assert_eq!(Some(&State::TerminalState(-1.0)), markov.world.read_state(3,1));
+    assert_eq!(Some(&State::TerminalState(-1.0)),             markov.world.read_state(3,1));
 
-    assert_eq!(Some(&State::StartState(0.7053082070401893)), markov.world.read_state(0,2));
+    assert_eq!(Some(&State::StartState(0.7053082070401893)),  markov.world.read_state(0,2));
     assert_eq!(Some(&State::NormalState(0.6553081816744336)), markov.world.read_state(1,2));
-    assert_eq!(Some(&State::NormalState(0.611415441839725)), markov.world.read_state(2,2));
+    assert_eq!(Some(&State::NormalState(0.611415441839725)),  markov.world.read_state(2,2));
     assert_eq!(Some(&State::NormalState(0.3879247270957595)), markov.world.read_state(3,2));
 }
 
