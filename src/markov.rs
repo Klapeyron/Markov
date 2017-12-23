@@ -38,21 +38,6 @@ impl Roundable for f64 {
     }
 }
 
-impl State {
-    pub fn to_reward (maybe_state: &Option<&State>) -> f64 {
-        match maybe_state {
-            &Some(state) => match state {
-                &State::ProhibitedState => 0.0,
-                &State::StartState(value) => value,
-                &State::NormalState(value) => value,
-                &State::TerminalState(value) => value,
-                &State::SpecialState(value) => value
-            },
-            &None => 0.0
-        }
-    }
-}
-
 // impl fmt::Debug for State {
 //     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 //         // write!(f, "{}", 7.0)
@@ -99,7 +84,7 @@ impl Markov {
         }
     }
 
-    fn state_after_action(self: &Markov, action: &Action, x: usize, y: usize) -> Option<&State> {
+    fn state_after_action(self: &Markov, action: &Action, x: usize, y: usize) -> &State {
         let position_after_action = |action: &Action, x: usize, y: usize| -> (Option<usize>, Option<usize>) {
             match action {
                 &Action::Left => (x.checked_sub(1), Some(y)),
@@ -109,11 +94,20 @@ impl Markov {
             }
         };
 
-        let (x,y) = position_after_action(&action, x, y);
+        let (maybe_x, maybe_y) = position_after_action(&action, x, y);
 
-        match (x,y) {
-            (Some(_), Some(_)) => self.world.read_state(x.unwrap(), y.unwrap()),
-            _ => None
+        match (maybe_x, maybe_y) {
+            (Some(_), Some(_)) => {
+                let maybe_state_after_move = self.world.read_state(maybe_x.unwrap(), maybe_y.unwrap());
+                match maybe_state_after_move {
+                    Some(state_after_move) => match state_after_move {
+                        &State::ProhibitedState => self.world.read_state(x, y).unwrap(), // return my current place (wall bump)
+                        _ => state_after_move // all other places are valid, so just return them
+                    }
+                    None => self.world.read_state(x, y).unwrap() // going outside world (some index too high), return current place
+                }
+            },
+            _ => self.world.read_state(x, y).unwrap() // going outside world (index overflow), return current place
         }
     }
 
@@ -123,10 +117,20 @@ impl Markov {
         let right_state    = self.state_after_action(&right_operation(action), x, y);
         let backward_state = self.state_after_action(&reverse_operation(action), x, y);
 
-        let forward_reward  = self.gama*self.p1*State::to_reward(&forward_state);
-        let left_reward     = self.gama*self.p2*State::to_reward(&left_state);
-        let right_reward    = self.gama*self.p3*State::to_reward(&right_state);
-        let backward_reward = self.gama*self.p4*State::to_reward(&backward_state);
+        let state_to_reward = |state: &State| -> f64 {
+            match state {
+                &State::ProhibitedState => panic!("It should not be able to obtain value from prohibited state"),
+                &State::StartState(value) => value,
+                &State::NormalState(value) => value,
+                &State::TerminalState(value) => value,
+                &State::SpecialState(value) => value
+            }
+        };
+
+        let forward_reward  = self.p1*state_to_reward(&forward_state);
+        let left_reward     = self.p2*state_to_reward(&left_state);
+        let right_reward    = self.p3*state_to_reward(&right_state);
+        let backward_reward = self.p4*state_to_reward(&backward_state);
 
         return forward_reward + left_reward + right_reward + backward_reward;
     }
@@ -145,8 +149,7 @@ impl Markov {
 
         let max = up_reward.max(left_reward.max(right_reward.max(down_reward)));
 
-        let reward = State::to_reward(&Some(state));
-        let result = reward + max + self.cost_of_move;
+        let result = max*self.gama + self.cost_of_move;
 
         let value_to_state = |state: &State, new_value: f64| -> State {
             match state {
@@ -231,16 +234,6 @@ fn prepare_standard_world() {
 }
 
 #[test]
-fn calculate_reward_for_reached_state() {
-    assert_eq!(0.0, State::to_reward(&None));
-    assert_eq!(0.0, State::to_reward(&Some(&State::ProhibitedState)));
-    assert_eq!(6.6, State::to_reward(&Some(&State::TerminalState(6.6))));
-    assert_eq!(7.7, State::to_reward(&Some(&State::StartState(7.7))));
-    assert_eq!(8.8, State::to_reward(&Some(&State::NormalState(8.8))));
-    assert_eq!(9.9, State::to_reward(&Some(&State::SpecialState(9.9))));
-}
-
-#[test]
 fn calculate_state_after_action() {
     let mut markov = Markov::new();
 
@@ -249,27 +242,25 @@ fn calculate_state_after_action() {
     markov.world.set_state(State::TerminalState(1.0), 3, 0);
     markov.world.set_state(State::TerminalState(-1.0), 3, 1);
 
-    assert_eq!(None, markov.state_after_action(&Action::Up, 0, 0));
-    assert_eq!(None, markov.state_after_action(&Action::Left, 0, 0));
-    assert_eq!(Some(&State::NormalState(0.0)), markov.state_after_action(&Action::Down, 0, 0));
-    assert_eq!(Some(&State::NormalState(0.0)), markov.state_after_action(&Action::Right, 0, 0));
+    assert_eq!(&State::NormalState(0.0), markov.state_after_action(&Action::Up, 0, 0));
+    assert_eq!(&State::NormalState(0.0), markov.state_after_action(&Action::Left, 0, 0));
+    assert_eq!(&State::NormalState(0.0), markov.state_after_action(&Action::Down, 0, 0));
+    assert_eq!(&State::NormalState(0.0), markov.state_after_action(&Action::Right, 0, 0));
 
-    assert_eq!(None, markov.state_after_action(&Action::Down, 0, 2));
-    assert_eq!(None, markov.state_after_action(&Action::Left, 0, 2));
-    assert_eq!(Some(&State::NormalState(0.0)), markov.state_after_action(&Action::Up, 0, 2));
-    assert_eq!(Some(&State::NormalState(0.0)), markov.state_after_action(&Action::Right, 0, 2));
+    assert_eq!(&State::StartState(0.0), markov.state_after_action(&Action::Down, 0, 2));
+    assert_eq!(&State::StartState(0.0), markov.state_after_action(&Action::Left, 0, 2));
+    assert_eq!(&State::NormalState(0.0), markov.state_after_action(&Action::Up, 0, 2));
+    assert_eq!(&State::NormalState(0.0), markov.state_after_action(&Action::Right, 0, 2));
 
-    assert_eq!(None, markov.state_after_action(&Action::Right, 3, 2));
-    assert_eq!(None, markov.state_after_action(&Action::Down, 3, 2));
-    assert_eq!(Some(&State::TerminalState(-1.0)), markov.state_after_action(&Action::Up, 3, 2));
-    assert_eq!(Some(&State::NormalState(0.0)), markov.state_after_action(&Action::Left, 3, 2));
+    assert_eq!(&State::NormalState(0.0), markov.state_after_action(&Action::Right, 3, 2));
+    assert_eq!(&State::NormalState(0.0), markov.state_after_action(&Action::Down, 3, 2));
+    assert_eq!(&State::TerminalState(-1.0), markov.state_after_action(&Action::Up, 3, 2));
+    assert_eq!(&State::NormalState(0.0), markov.state_after_action(&Action::Left, 3, 2));
 
-    assert_eq!(None, markov.state_after_action(&Action::Right, 3, 0));
-    assert_eq!(None, markov.state_after_action(&Action::Up, 3, 0));
-    assert_eq!(Some(&State::TerminalState(-1.0)), markov.state_after_action(&Action::Down, 3, 0));
-    assert_eq!(Some(&State::NormalState(0.0)), markov.state_after_action(&Action::Left, 3, 0));
-
-    assert_eq!(None, markov.state_after_action(&Action::Right, 10, 10));
+    assert_eq!(&State::TerminalState(1.0), markov.state_after_action(&Action::Right, 3, 0));
+    assert_eq!(&State::TerminalState(1.0), markov.state_after_action(&Action::Up, 3, 0));
+    assert_eq!(&State::TerminalState(-1.0), markov.state_after_action(&Action::Down, 3, 0));
+    assert_eq!(&State::NormalState(0.0), markov.state_after_action(&Action::Left, 3, 0));
 }
 
 #[test]
@@ -291,24 +282,9 @@ fn calculate_evaluation_of_action() {
 }
 
 #[test]
-fn evaluate_sample_from_slides() {
-    // example from slide 17 at http://ais.informatik.uni-freiburg.de/teaching/ss03/ams/DecisionProblems.pdf
-    let mut markov = Markov::new();
-
-    markov.world.set_state(State::NormalState(1.0), 1, 1);
-    markov.world.set_state(State::NormalState(1.0), 1, 2);
-    markov.world.set_state(State::NormalState(5.0), 0, 1);
-    markov.world.set_state(State::NormalState(-8.0), 2, 1);
-    markov.world.set_state(State::NormalState(10.0), 1, 0);
-
-    markov.evaluate();
-
-    assert_eq!(&State::NormalState(8.66), markov.world.read_state(1,1).unwrap());
-}
-
-#[test]
-#[ignore]
+// #[ignore]
 fn calculate_standard_world() {
+    // example from slide 4 at http://sequoia.ict.pwr.wroc.pl/~witold/ai/aie_rlearn_s.pdf
     let mut markov = Markov::new();
 
     markov.world.set_state(State::StartState(0.0), 0, 2);
@@ -321,22 +297,20 @@ fn calculate_standard_world() {
         markov.evaluate();
     }
 
-    println!("{:#?}",markov.world);
-
-    assert_eq!(Some(&State::NormalState(0.812)), markov.world.read_state(0,0));
-    assert_eq!(Some(&State::NormalState(0.868)), markov.world.read_state(1,0));
-    assert_eq!(Some(&State::NormalState(0.912)), markov.world.read_state(2,0));
+    assert_eq!(Some(&State::NormalState(0.8115582189599785)), markov.world.read_state(0,0));
+    assert_eq!(Some(&State::NormalState(0.8678082191773653)), markov.world.read_state(1,0));
+    assert_eq!(Some(&State::NormalState(0.9178082191779183)), markov.world.read_state(2,0));
     assert_eq!(Some(&State::TerminalState(1.0)), markov.world.read_state(3,0));
 
-    assert_eq!(Some(&State::NormalState(0.762)), markov.world.read_state(0,1));
+    assert_eq!(Some(&State::NormalState(0.7615582184462935)), markov.world.read_state(0,1));
     assert_eq!(Some(&State::ProhibitedState), markov.world.read_state(1,1));
-    assert_eq!(Some(&State::NormalState(0.660)), markov.world.read_state(2,1));
+    assert_eq!(Some(&State::NormalState(0.6602739726022764)), markov.world.read_state(2,1));
     assert_eq!(Some(&State::TerminalState(-1.0)), markov.world.read_state(3,1));
 
-    assert_eq!(Some(&State::StartState(0.705)), markov.world.read_state(0,2));
-    assert_eq!(Some(&State::NormalState(0.655)), markov.world.read_state(1,2));
-    assert_eq!(Some(&State::NormalState(0.611)), markov.world.read_state(2,2));
-    assert_eq!(Some(&State::NormalState(0.388)), markov.world.read_state(3,2));
+    assert_eq!(Some(&State::StartState(0.7053082070401893)), markov.world.read_state(0,2));
+    assert_eq!(Some(&State::NormalState(0.6553081816744336)), markov.world.read_state(1,2));
+    assert_eq!(Some(&State::NormalState(0.611415441839725)), markov.world.read_state(2,2));
+    assert_eq!(Some(&State::NormalState(0.3879247270957595)), markov.world.read_state(3,2));
 }
 
 #[test]
