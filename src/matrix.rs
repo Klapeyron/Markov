@@ -9,10 +9,10 @@ pub struct Matrix<T> {
 }
 
 impl<T> Matrix<T> {
-    pub fn new(defaultValue: T, xsize: usize, ysize: usize) -> Matrix<T>
+    pub fn new(default_value: T, xsize: usize, ysize: usize) -> Matrix<T>
         where T: Clone {
         Matrix {
-            data: vec![vec![defaultValue; xsize]; ysize],
+            data: vec![vec![default_value; xsize]; ysize],
             x: xsize,
             y: ysize
         }

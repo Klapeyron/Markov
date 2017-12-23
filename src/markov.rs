@@ -19,27 +19,23 @@ pub enum State {
     NormalState(f64)
 }
 
-impl State {
-    pub fn to_reward (maybe_state: &Option<&State>) -> f64 {
-        match maybe_state {
-            &Some(state) => match state {
-                &State::ProhibitedState => 0.0,
-                &State::StartState(value) => value,
-                &State::NormalState(value) => value,
-                &State::TerminalState(value) => value,
-                &State::SpecialState(value) => value
-            },
-            &None => 0.0
-        }
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub enum Action {
     Up,
     Down,
     Left,
     Right
+}
+
+trait Roundable {
+    fn round_to(&self, precision: i32) -> f64;
+}
+
+impl Roundable for f64 {
+    fn round_to(&self, precision: i32) -> f64 {
+        let divisor = 10_f64.powi(precision);
+        (*self*divisor).round()/divisor
+    }
 }
 
 // impl fmt::Debug for State {
@@ -72,6 +68,21 @@ pub fn reverse_operation(action: &Action) -> Action {
         &Action::Left => Action::Right,
         &Action::Down => Action::Up,
         &Action::Right => Action::Left
+    }
+}
+
+impl State {
+    pub fn to_reward (maybe_state: &Option<&State>) -> f64 {
+        match maybe_state {
+            &Some(state) => match state {
+                &State::ProhibitedState => 0.0,
+                &State::StartState(value) => value,
+                &State::NormalState(value) => value,
+                &State::TerminalState(value) => value,
+                &State::SpecialState(value) => value
+            },
+            &None => 0.0
+        }
     }
 }
 
@@ -130,7 +141,7 @@ impl Markov {
         let max = up_reward.max(left_reward.max(right_reward.max(down_reward)));
 
         // // TODO: calculate result
-        // let result = elem + self.gama*max - self.cost_of_move;
+        // let result = elem + self.gama*max + self.cost_of_move;
 
         // TODO: logic of state changes, skiping invalid
 
@@ -144,7 +155,7 @@ impl Markov {
             }
         };
 
-        (state.clone(), Action::Left)
+        (State::ProhibitedState, Action::Left)
         // (value_to_state(state, result), Action::Left) // TODO: remove hardcoded optimal action
     }
 
@@ -219,6 +230,66 @@ fn prepare_standard_world() {
     assert_eq!(Some(&State::TerminalState(-1.0)), markov.world.read_state(3,1));
 }
 
+#[test]
+fn calculate_reward_for_reached_state() {
+    assert_eq!(0.0, State::to_reward(&None));
+    assert_eq!(0.0, State::to_reward(&Some(&State::ProhibitedState)));
+    assert_eq!(6.6, State::to_reward(&Some(&State::TerminalState(6.6))));
+    assert_eq!(7.7, State::to_reward(&Some(&State::StartState(7.7))));
+    assert_eq!(8.8, State::to_reward(&Some(&State::NormalState(8.8))));
+    assert_eq!(9.9, State::to_reward(&Some(&State::SpecialState(9.9))));
+}
+
+#[test]
+fn calculate_state_after_action() {
+    let mut markov = Markov::new();
+
+    markov.world.set_state(State::StartState(0.0), 0, 2);
+    markov.world.set_state(State::ProhibitedState, 1, 1);
+    markov.world.set_state(State::TerminalState(1.0), 3, 0);
+    markov.world.set_state(State::TerminalState(-1.0), 3, 1);
+
+    assert_eq!(None, markov.state_after_action(&Action::Up, 0, 0));
+    assert_eq!(None, markov.state_after_action(&Action::Left, 0, 0));
+    assert_eq!(Some(&State::NormalState(0.0)), markov.state_after_action(&Action::Down, 0, 0));
+    assert_eq!(Some(&State::NormalState(0.0)), markov.state_after_action(&Action::Right, 0, 0));
+
+    assert_eq!(None, markov.state_after_action(&Action::Down, 0, 2));
+    assert_eq!(None, markov.state_after_action(&Action::Left, 0, 2));
+    assert_eq!(Some(&State::NormalState(0.0)), markov.state_after_action(&Action::Up, 0, 2));
+    assert_eq!(Some(&State::NormalState(0.0)), markov.state_after_action(&Action::Right, 0, 2));
+
+    assert_eq!(None, markov.state_after_action(&Action::Right, 3, 2));
+    assert_eq!(None, markov.state_after_action(&Action::Down, 3, 2));
+    assert_eq!(Some(&State::TerminalState(-1.0)), markov.state_after_action(&Action::Up, 3, 2));
+    assert_eq!(Some(&State::NormalState(0.0)), markov.state_after_action(&Action::Left, 3, 2));
+
+    assert_eq!(None, markov.state_after_action(&Action::Right, 3, 0));
+    assert_eq!(None, markov.state_after_action(&Action::Up, 3, 0));
+    assert_eq!(Some(&State::TerminalState(-1.0)), markov.state_after_action(&Action::Down, 3, 0));
+    assert_eq!(Some(&State::NormalState(0.0)), markov.state_after_action(&Action::Left, 3, 0));
+
+    assert_eq!(None, markov.state_after_action(&Action::Right, 10, 10));
+}
+
+#[test]
+fn calculate_evaluation_of_action() {
+    // example from slide 17 at http://ais.informatik.uni-freiburg.de/teaching/ss03/ams/DecisionProblems.pdf
+    let mut markov = Markov::new();
+
+    markov.world.set_state(State::NormalState(1.0), 1, 1);
+    markov.world.set_state(State::NormalState(1.0), 1, 2);
+    markov.world.set_state(State::NormalState(5.0), 0, 1);
+    markov.world.set_state(State::NormalState(-8.0), 2, 1);
+    markov.world.set_state(State::NormalState(10.0), 1, 0);
+
+    let field = &markov.world.read_state(1,1).unwrap();
+    assert_eq!(0.5, markov.evaluate_action(field, &Action::Down,  1,1).round_to(3));
+    assert_eq!(7.7, markov.evaluate_action(field, &Action::Up,  1, 1).round_to(3));
+    assert_eq!(5.1, markov.evaluate_action(field, &Action::Left,  1, 1).round_to(3));
+    assert_eq!(-5.3, markov.evaluate_action(field, &Action::Right,  1, 1).round_to(3));
+}
+
 // #[test]
 // fn calculate_standard_world() {
 //     let mut markov = Markov::new();
@@ -230,20 +301,20 @@ fn prepare_standard_world() {
 
 //     markov.evaluate();
 
-//     assert_eq!(Some(&world::State::NormalState(0.812)), markov.world.read_state(0,0));
-//     assert_eq!(Some(&world::State::NormalState(0.868)), markov.world.read_state(1,0));
-//     assert_eq!(Some(&world::State::NormalState(0.912)), markov.world.read_state(2,0));
-//     assert_eq!(Some(&world::State::TerminalState(1.0)), markov.world.read_state(3,0));
+//     assert_eq!(Some(&State::NormalState(0.812)), markov.world.read_state(0,0));
+//     assert_eq!(Some(&State::NormalState(0.868)), markov.world.read_state(1,0));
+//     assert_eq!(Some(&State::NormalState(0.912)), markov.world.read_state(2,0));
+//     assert_eq!(Some(&State::TerminalState(1.0)), markov.world.read_state(3,0));
 
-//     assert_eq!(Some(&world::State::NormalState(0.762)), markov.world.read_state(0,1));
-//     assert_eq!(Some(&world::State::ProhibitedState), markov.world.read_state(1,1));
-//     assert_eq!(Some(&world::State::NormalState(0.660)), markov.world.read_state(2,1));
-//     assert_eq!(Some(&world::State::TerminalState(-1.0)), markov.world.read_state(3,1));
+//     assert_eq!(Some(&State::NormalState(0.762)), markov.world.read_state(0,1));
+//     assert_eq!(Some(&State::ProhibitedState), markov.world.read_state(1,1));
+//     assert_eq!(Some(&State::NormalState(0.660)), markov.world.read_state(2,1));
+//     assert_eq!(Some(&State::TerminalState(-1.0)), markov.world.read_state(3,1));
 
-//     assert_eq!(Some(&world::State::StartState(0.705)), markov.world.read_state(0,2));
-//     assert_eq!(Some(&world::State::NormalState(0.655)), markov.world.read_state(1,2));
-//     assert_eq!(Some(&world::State::NormalState(0.611)), markov.world.read_state(2,2));
-//     assert_eq!(Some(&world::State::NormalState(0.388)), markov.world.read_state(3,2));
+//     assert_eq!(Some(&State::StartState(0.705)), markov.world.read_state(0,2));
+//     assert_eq!(Some(&State::NormalState(0.655)), markov.world.read_state(1,2));
+//     assert_eq!(Some(&State::NormalState(0.611)), markov.world.read_state(2,2));
+//     assert_eq!(Some(&State::NormalState(0.388)), markov.world.read_state(3,2));
 // }
 
 #[test]
