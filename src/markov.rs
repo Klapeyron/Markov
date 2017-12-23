@@ -123,10 +123,10 @@ impl Markov {
         let right_state    = self.state_after_action(&right_operation(action), x, y);
         let backward_state = self.state_after_action(&reverse_operation(action), x, y);
 
-        let forward_reward  = self.p1*State::to_reward(&forward_state);
-        let left_reward     = self.p2*State::to_reward(&left_state);
-        let right_reward    = self.p3*State::to_reward(&right_state);
-        let backward_reward = self.p4*State::to_reward(&backward_state);
+        let forward_reward  = self.gama*self.p1*State::to_reward(&forward_state);
+        let left_reward     = self.gama*self.p2*State::to_reward(&left_state);
+        let right_reward    = self.gama*self.p3*State::to_reward(&right_state);
+        let backward_reward = self.gama*self.p4*State::to_reward(&backward_state);
 
         return forward_reward + left_reward + right_reward + backward_reward;
     }
@@ -143,14 +143,11 @@ impl Markov {
         let right_reward = self.evaluate_action(&state, &Action::Right, x, y);
         let down_reward  = self.evaluate_action(&state, &Action::Down,  x, y);
 
-        // // TODO: calculate max
         let max = up_reward.max(left_reward.max(right_reward.max(down_reward)));
 
-        // // TODO: calculate result
         let reward = State::to_reward(&Some(state));
-        let result = reward + self.gama*max + self.cost_of_move;
+        let result = reward + max + self.cost_of_move;
 
-        // TODO: logic of state changes, skiping invalid
         let value_to_state = |state: &State, new_value: f64| -> State {
             match state {
                 &State::ProhibitedState => State::ProhibitedState,
@@ -161,15 +158,12 @@ impl Markov {
             }
         };
 
-        // (State::ProhibitedState, Action::Left)
         (value_to_state(state, result), Action::Left) // TODO: remove hardcoded optimal action
     }
 
     pub fn evaluate(self: &mut Markov) {
-        // TODO: create copy of the world
         let mut new_world = self.world.clone();
 
-        // TODO: iterate over all elements
         for (y, row) in self.world.matrix().iter().enumerate() {
             for (x, elem) in row.iter().enumerate() {
                 let (new_state, action) = self.evaluate_field(elem, x, y);
@@ -179,7 +173,6 @@ impl Markov {
 
         self.world = new_world;
 
-        println!("{:#?}", self.world);
         // U(s) = R(s) + gama max{T(s,a,s')U(s')}
 
         // match (&self.data[y][x], &new_state)
@@ -327,6 +320,8 @@ fn calculate_standard_world() {
     for _ in 0..30 {
         markov.evaluate();
     }
+
+    println!("{:#?}",markov.world);
 
     assert_eq!(Some(&State::NormalState(0.812)), markov.world.read_state(0,0));
     assert_eq!(Some(&State::NormalState(0.868)), markov.world.read_state(1,0));
