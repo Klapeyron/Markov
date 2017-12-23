@@ -38,6 +38,21 @@ impl Roundable for f64 {
     }
 }
 
+impl State {
+    pub fn to_reward (maybe_state: &Option<&State>) -> f64 {
+        match maybe_state {
+            &Some(state) => match state {
+                &State::ProhibitedState => 0.0,
+                &State::StartState(value) => value,
+                &State::NormalState(value) => value,
+                &State::TerminalState(value) => value,
+                &State::SpecialState(value) => value
+            },
+            &None => 0.0
+        }
+    }
+}
+
 // impl fmt::Debug for State {
 //     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 //         // write!(f, "{}", 7.0)
@@ -71,26 +86,11 @@ pub fn reverse_operation(action: &Action) -> Action {
     }
 }
 
-impl State {
-    pub fn to_reward (maybe_state: &Option<&State>) -> f64 {
-        match maybe_state {
-            &Some(state) => match state {
-                &State::ProhibitedState => 0.0,
-                &State::StartState(value) => value,
-                &State::NormalState(value) => value,
-                &State::TerminalState(value) => value,
-                &State::SpecialState(value) => value
-            },
-            &None => 0.0
-        }
-    }
-}
-
 impl Markov {
     fn new() -> Markov {
         Markov {
             world: matrix::Matrix::new(State::NormalState(0.0), 4, 3),
-            gama: 0.98,
+            gama: 1.0,
             cost_of_move: -0.04,
             p1: 0.8,
             p2: 0.1,
@@ -132,19 +132,26 @@ impl Markov {
     }
 
     fn evaluate_field(self: &Markov, state: &State, x: usize, y: usize) -> (State, Action) {
-        let up_reward    :f64 = self.evaluate_action(&state, &Action::Up,    x, y);
-        let left_reward  :f64 = self.evaluate_action(&state, &Action::Left,  x, y);
-        let right_reward :f64 = self.evaluate_action(&state, &Action::Right, x, y);
-        let down_reward  :f64 = self.evaluate_action(&state, &Action::Down,  x, y);
+        match state {
+            &State::TerminalState(value) => { return (State::TerminalState(value), Action::Left); },
+            &State::ProhibitedState => { return (State::ProhibitedState, Action::Left); }
+            _ => {}
+        }
+
+        let up_reward    = self.evaluate_action(&state, &Action::Up,    x, y);
+        let left_reward  = self.evaluate_action(&state, &Action::Left,  x, y);
+        let right_reward = self.evaluate_action(&state, &Action::Right, x, y);
+        let down_reward  = self.evaluate_action(&state, &Action::Down,  x, y);
 
         // // TODO: calculate max
         let max = up_reward.max(left_reward.max(right_reward.max(down_reward)));
 
         // // TODO: calculate result
-        // let result = elem + self.gama*max + self.cost_of_move;
+        let reward = State::to_reward(&Some(state));
+        let result = // reward +
+            self.gama*max + self.cost_of_move;
 
         // TODO: logic of state changes, skiping invalid
-
         let value_to_state = |state: &State, new_value: f64| -> State {
             match state {
                 &State::ProhibitedState => State::ProhibitedState,
@@ -155,8 +162,8 @@ impl Markov {
             }
         };
 
-        (State::ProhibitedState, Action::Left)
-        // (value_to_state(state, result), Action::Left) // TODO: remove hardcoded optimal action
+        // (State::ProhibitedState, Action::Left)
+        (value_to_state(state, result), Action::Left) // TODO: remove hardcoded optimal action
     }
 
     pub fn evaluate(self: &mut Markov) {
@@ -164,8 +171,8 @@ impl Markov {
         let mut new_world = self.world.clone();
 
         // TODO: iterate over all elements
-        for (x, row) in self.world.matrix().iter().enumerate() {
-            for (y, elem) in row.iter().enumerate() {
+        for (y, row) in self.world.matrix().iter().enumerate() {
+            for (x, elem) in row.iter().enumerate() {
                 let (new_state, action) = self.evaluate_field(elem, x, y);
                 new_world.set_state(new_state, x, y);
             }
@@ -173,6 +180,7 @@ impl Markov {
 
         self.world = new_world;
 
+        println!("{:#?}", self.world);
         // U(s) = R(s) + gama max{T(s,a,s')U(s')}
 
         // match (&self.data[y][x], &new_state)
@@ -336,7 +344,7 @@ fn update_normal_state() {
 
 // #[test]
 // fn not_allow_normal_state_update_from_different_type() {
-//     let mut world: Matrix<State> = Matrix::new(State::NormalState(0.0), 4, 3);
+//     let mut world = matrix::Matrix::new(State::NormalState(0.0), 4, 3);
 
 //     assert_eq!(true, world.set_state(State::ProhibitedState, 1, 1));
 //     assert_eq!(false, world.set_state(State::NormalState(4.2), 1, 1));
@@ -344,7 +352,7 @@ fn update_normal_state() {
 
 // #[test]
 // fn not_allow_immutable_state_update() {
-//     let mut world: Matrix<State> = Matrix::new(State::NormalState(0.0), 4, 3);
+//     let mut world = matrix::Matrix::new(State::NormalState(0.0), 4, 3);
 
 //     assert_eq!(true, world.set_state(State::StartState(0.0), 1, 1));
 //     assert_eq!(false, world.set_state(State::StartState(0.0), 1, 1));
