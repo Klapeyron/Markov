@@ -78,20 +78,6 @@ impl Roundable for f64 {
 }
 
 impl MarkovBuilder {
-    // pub fn new() -> MarkovBuilder {
-    //     MarkovBuilder {
-    //         x: 0,
-    //         y: 0,
-    //         states: Vec::new(),
-    //         gama: 1.0,
-    //         cost_of_move: 0.0,
-    //         p1: 0.8,
-    //         p2: 0.1,
-    //         p3: 0.1,
-    //         p4: 0.0
-    //     }
-    // }
-
     pub fn finalize(&self) -> Markov {
         let mut matrix = matrix::Matrix::new(State::NormalState(0.0), self.x, self.y);
         for &(ref state, x, y) in self.states.iter() {
