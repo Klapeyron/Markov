@@ -1,4 +1,5 @@
 use matrix;
+use std::fmt;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Markov {
@@ -24,7 +25,7 @@ pub struct MarkovBuilder {
     p4: f64
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Clone, PartialEq)]
 pub enum State {
     ProhibitedState,
     StartState(f64),
@@ -33,12 +34,37 @@ pub enum State {
     NormalState(f64)
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum Action {
     Up,
     Down,
     Left,
     Right
+}
+
+impl fmt::Debug for State {
+    // from specification http://sequoia.ict.pwr.wroc.pl/~witold/ai/MDPRL_assignment.html
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            &State::ProhibitedState => write!(f, "F"),
+            &State::StartState(value) => write!(f, "S({:.3})", value),
+            &State::TerminalState(value) => write!(f, "T({:.3})", value),
+            &State::SpecialState(value) => write!(f, "B({:.3})", value),
+            &State::NormalState(value) => write!(f, "N({:.3})", value),
+        }
+    }
+}
+
+impl fmt::Debug for Action {
+    // from specification http://sequoia.ict.pwr.wroc.pl/~witold/ai/MDPRL_assignment.html
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Up => write!(f, "^"),
+            Left => write!(f, "<"),
+            Right => write!(f, ">"),
+            Down => write!(f, "v")
+        }
+    }
 }
 
 trait Roundable {
