@@ -59,10 +59,10 @@ impl fmt::Debug for Action {
     // from specification http://sequoia.ict.pwr.wroc.pl/~witold/ai/MDPRL_assignment.html
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            Up => write!(f, "^"),
-            Left => write!(f, "<"),
-            Right => write!(f, ">"),
-            Down => write!(f, "v")
+            &Action::Up => write!(f, "^"),
+            &Action::Left => write!(f, "<"),
+            &Action::Right => write!(f, ">"),
+            &Action::Down => write!(f, "v")
         }
     }
 }
