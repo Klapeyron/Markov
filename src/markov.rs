@@ -21,8 +21,7 @@ pub struct MarkovBuilder {
     cost_of_move: f64,
     p1: f64,
     p2: f64,
-    p3: f64,
-    p4: f64
+    p3: f64
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq)]
@@ -94,7 +93,7 @@ impl MarkovBuilder {
     // }
 
     pub fn finalize(&self) -> Markov {
-        let mut matrix = matrix::Matrix::new(State::NormalState(0.0), 4, 3);
+        let mut matrix = matrix::Matrix::new(State::NormalState(0.0), self.x, self.y);
         for &(ref state, x, y) in self.states.iter() {
             matrix.set_state(state.clone(), x, y);
         }
@@ -105,7 +104,7 @@ impl MarkovBuilder {
             p1: self.p1,
             p2: self.p2,
             p3: self.p3,
-            p4: self.p4
+            p4: (1.0_f64 - self.p1 - self.p2 - self.p3).abs().round_to(2)
         }
     }
 }
