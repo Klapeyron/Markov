@@ -1,13 +1,24 @@
+#[macro_use] extern crate serde_derive;
+extern crate serde;
+extern crate serde_json;
+
+use std::io::{self, Read};
+
 mod matrix;
 mod markov;
 
 fn main() {
-    let mut world: matrix::Matrix<markov::State> = matrix::Matrix::new(markov::State::NormalState(0.0), 4, 3);
+    let mut buffer = String::new();
+    io::stdin().read_to_string(&mut buffer).expect("Invalid input");
 
-    world.set_state(markov::State::StartState(0.0), 0, 2);
-    world.set_state(markov::State::ProhibitedState, 1, 1);
-    world.set_state(markov::State::TerminalState(1.0), 3, 0);
-    world.set_state(markov::State::TerminalState(-1.0), 3, 1);
+    let markov_builder: markov::MarkovBuilder = serde_json::from_str(&buffer).expect("Invalid structure of data");
 
-    println!("Hello, {:#?}", world);
+    let mut markov = markov_builder.finalize();
+    let mut number_of_iterations = 0;
+
+    while markov.evaluate() > 0.0001 {
+        number_of_iterations += 1;
+    }
+
+    println!("Algorithm finished after {} iterations with result: {:#?}", number_of_iterations, markov);
 }

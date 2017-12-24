@@ -2,9 +2,9 @@ use std::clone::Clone;
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Matrix<T> {
-    data: Vec<Vec<T>>,
     x: usize,
-    y: usize
+    y: usize,
+    data: Vec<Vec<T>>
 }
 
 impl<T> Matrix<T> {

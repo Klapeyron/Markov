@@ -1,6 +1,7 @@
 use matrix;
 
-struct Markov {
+#[derive(Debug, Clone, PartialEq)]
+pub struct Markov {
     world: matrix::Matrix<State>,
     gama: f64,
     cost_of_move: f64,
@@ -10,7 +11,20 @@ struct Markov {
     p4: f64
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug)]
+pub struct MarkovBuilder {
+    x: usize,
+    y: usize,
+    states: Vec<(State, usize, usize)>,
+    gama: f64,
+    cost_of_move: f64,
+    p1: f64,
+    p2: f64,
+    p3: f64,
+    p4: f64
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub enum State {
     ProhibitedState,
     StartState(f64),
@@ -38,11 +52,37 @@ impl Roundable for f64 {
     }
 }
 
-// impl fmt::Debug for State {
-//     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-//         // write!(f, "{}", 7.0)
-//     }
-// }
+impl MarkovBuilder {
+    // pub fn new() -> MarkovBuilder {
+    //     MarkovBuilder {
+    //         x: 0,
+    //         y: 0,
+    //         states: Vec::new(),
+    //         gama: 1.0,
+    //         cost_of_move: 0.0,
+    //         p1: 0.8,
+    //         p2: 0.1,
+    //         p3: 0.1,
+    //         p4: 0.0
+    //     }
+    // }
+
+    pub fn finalize(&self) -> Markov {
+        let mut matrix = matrix::Matrix::new(State::NormalState(0.0), 4, 3);
+        for &(ref state, x, y) in self.states.iter() {
+            matrix.set_state(state.clone(), x, y);
+        }
+        Markov {
+            world: matrix,
+            gama: self.gama,
+            cost_of_move: self.cost_of_move,
+            p1: self.p1,
+            p2: self.p2,
+            p3: self.p3,
+            p4: self.p4
+        }
+    }
+}
 
 pub fn left_operation(action: &Action) -> Action {
     match action {
@@ -158,18 +198,32 @@ impl Markov {
         (updated_state, Action::Left) // TODO: remove hardcoded optimal action
     }
 
-    pub fn evaluate(self: &mut Markov) {
+    pub fn evaluate(self: &mut Markov) -> f64 {
         let mut new_world = self.world.clone();
+        let mut error = 0.0;
+
+        let calculate_error = |previous_state: &State, new_state: &State| -> f64 {
+            match (previous_state, new_state) {
+                (&State::ProhibitedState, &State::ProhibitedState) => 0.0,
+                (&State::NormalState(previous_value), &State::NormalState(new_value)) => (new_value - previous_value).abs(),
+                (&State::StartState(previous_value), &State::StartState(new_value)) => (new_value - previous_value).abs(),
+                (&State::SpecialState(previous_value), &State::SpecialState(new_value)) => (new_value - previous_value).abs(),
+                (&State::TerminalState(previous_value), &State::TerminalState(new_value)) => (new_value - previous_value).abs(),
+                _ => panic!("Type of state changed, it should never happen")
+            }
+        };
 
         for (y, row) in self.world.matrix().iter().enumerate() {
             for (x, elem) in row.iter().enumerate() {
                 let (new_state, action) = self.evaluate_field(elem, x, y);
+                error += calculate_error(&elem, &new_state);
                 new_world.set_state(new_state, x, y);
             }
         }
 
         self.world = new_world;
 
+        return error;
         // U(s) = R(s) + gama max{T(s,a,s')U(s')}
 
         // match (&self.data[y][x], &new_state)
