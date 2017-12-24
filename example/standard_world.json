@@ -1,0 +1,16 @@
+{
+    "x":4,
+    "y":3,
+    "states":[
+	[{"StartState":0.0}, 0, 2],
+	[{"TerminalState":1.0}, 3, 0],
+	[{"TerminalState":-1.0}, 3, 1],
+	["ProhibitedState", 1, 1]
+    ],
+    "gama":1.0,
+    "cost_of_move":-0.04,
+    "p1":0.8,
+    "p2":0.1,
+    "p3":0.1,
+    "p4":0.0
+}
