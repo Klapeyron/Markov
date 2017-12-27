@@ -35,7 +35,7 @@ pub enum State {
     ProhibitedState,
     StartState(f64),
     TerminalState(f64),
-    SpecialState(f64),
+    SpecialState(f64, f64),
     NormalState(f64)
 }
 
@@ -54,7 +54,7 @@ impl fmt::Debug for State {
             &State::ProhibitedState => write!(f, "F"),
             &State::StartState(value) => write!(f, "S({:.3})", value),
             &State::TerminalState(value) => write!(f, "T({:.3})", value),
-            &State::SpecialState(value) => write!(f, "B({:.3})", value),
+            &State::SpecialState(value, _) => write!(f, "B({:.3})", value),
             &State::NormalState(value) => write!(f, "N({:.3})", value),
         }
     }
@@ -212,7 +212,7 @@ impl Markov {
                 &State::StartState(value) => value,
                 &State::NormalState(value) => value,
                 &State::TerminalState(value) => value,
-                &State::SpecialState(value) => value
+                &State::SpecialState(value, _) => value
             }
         };
 
@@ -251,14 +251,21 @@ impl Markov {
             action = Some(Action::Up);
         }
 
-        let result = max*self.gama + self.cost_of_move;
+        let calculate_cost_of_move = |state: &State| -> f64 {
+            match state {
+                &State::SpecialState(_, cost_of_move) => cost_of_move,
+                _ => self.cost_of_move
+            }
+        };
+        
+        let result = max*self.gama + calculate_cost_of_move(self.state_after_action(&action.clone().unwrap(), x, y));
 
         let updated_state = match state {
             &Field { state: State::ProhibitedState, .. } => State::ProhibitedState,
             &Field { state: State::StartState(_), .. } => State::StartState(result),
             &Field { state: State::NormalState(_), .. } => State::NormalState(result),
             &Field { state: State::TerminalState(_), .. } => State::TerminalState(result),
-            &Field { state: State::SpecialState(_), .. } => State::SpecialState(result)
+            &Field { state: State::SpecialState(_, cost_of_move), .. } => State::SpecialState(result, cost_of_move)
         };
 
         Field { state: updated_state, action: action } // TODO: remove hardcoded optimal action
@@ -273,7 +280,7 @@ impl Markov {
                 (&State::ProhibitedState, &State::ProhibitedState) => 0.0,
                 (&State::NormalState(previous_value), &State::NormalState(new_value)) => (new_value - previous_value).abs(),
                 (&State::StartState(previous_value), &State::StartState(new_value)) => (new_value - previous_value).abs(),
-                (&State::SpecialState(previous_value), &State::SpecialState(new_value)) => (new_value - previous_value).abs(),
+                (&State::SpecialState(previous_value, _), &State::SpecialState(new_value, _)) => (new_value - previous_value).abs(),
                 (&State::TerminalState(previous_value), &State::TerminalState(new_value)) => (new_value - previous_value).abs(),
                 _ => panic!("Type of state changed, it should never happen")
             }

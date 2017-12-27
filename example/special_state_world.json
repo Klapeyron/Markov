@@ -3,7 +3,7 @@
     "y":4,
     "states":[
 	[{"StartState":0.0}, 0, 3],
-	[{"SpecialState":-20.0}, 2, 2],
+	[{"SpecialState":[0.0,-20.0]}, 2, 2],
 	[{"TerminalState":100}, 3, 3],
 	["ProhibitedState", 2, 3]
     ],
