@@ -83,7 +83,10 @@ impl Field {
 
 impl fmt::Debug for Field {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{:?}, {:?}", self.state, self.action)
+        match &self.action {
+            &Some(ref value) => write!(f, "{:?}, {:?}", self.state, self.action.clone().unwrap()),
+            &None => write!(f, "{:?}, {:?}", self.state, self.action)
+        }
     }
 }
 

@@ -1,6 +1,7 @@
 use std::clone::Clone;
+use std::fmt;
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(PartialEq, Clone)]
 pub struct Matrix<T> {
     x: usize,
     y: usize,
@@ -41,6 +42,20 @@ impl<T> Matrix<T> {
 
     pub fn matrix(self: &Matrix<T>) -> &Vec<Vec<T>> {
         &self.data
+    }
+}
+
+impl<T> fmt::Debug for Matrix<T>
+    where T: fmt::Debug {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "[");
+        for row in self.data.iter() {
+            write!(f, "\n");
+            for elem in row.iter() {
+                write!(f, "[{:?}], ", elem);
+            }
+        }
+        write!(f, "]")
     }
 }
 
