@@ -1,6 +1,5 @@
 use matrix;
 use std::fmt;
-use rand::{thread_rng, Rng};
 
 #[derive(Clone, PartialEq)]
 pub struct Field {
@@ -414,10 +413,10 @@ fn calculate_standard_world() {
     assert_eq!(State::NormalState(0.6602739726022764), markov.world.read_state(2,1).unwrap().state);
     assert_eq!(State::TerminalState(-1.0),             markov.world.read_state(3,1).unwrap().state);
 
-    assert_eq!(State::StartState(0.705308207040189),  markov.world.read_state(0,2).unwrap().state);
-    assert_eq!(State::NormalState(0.6553081816744335), markov.world.read_state(1,2).unwrap().state);
+    assert_eq!(State::StartState(0.7053082070401893),  markov.world.read_state(0,2).unwrap().state);
+    assert_eq!(State::NormalState(0.6553081816744336), markov.world.read_state(1,2).unwrap().state);
     assert_eq!(State::NormalState(0.611415441839725),  markov.world.read_state(2,2).unwrap().state);
-    assert_eq!(State::NormalState(0.3879247270957593), markov.world.read_state(3,2).unwrap().state);
+    assert_eq!(State::NormalState(0.3879247270957595), markov.world.read_state(3,2).unwrap().state);
 }
 
 #[test]
