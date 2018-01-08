@@ -1,5 +1,6 @@
 use matrix;
 use std::fmt;
+use rand::{thread_rng, Rng};
 
 #[derive(Clone, PartialEq)]
 pub struct Field {
@@ -223,12 +224,14 @@ impl Markov {
             }
         };
 
-        let forward_reward  = self.p1*(calculate_cost_of_move(&forward_state) + self.gama*state_to_reward(&forward_state));
-        let left_reward     = self.p2*(calculate_cost_of_move(&left_state) + self.gama*state_to_reward(&left_state));
-        let right_reward    = self.p3*(calculate_cost_of_move(&right_state) + self.gama*state_to_reward(&right_state));
-        let backward_reward = self.p4*(calculate_cost_of_move(&backward_state) + self.gama*state_to_reward(&backward_state));
+        let forward_reward  = self.p1*state_to_reward(&forward_state);
+        let left_reward     = self.p2*state_to_reward(&left_state);
+        let right_reward    = self.p3*state_to_reward(&right_state);
+        let backward_reward = self.p4*state_to_reward(&backward_state);
 
-        return forward_reward + left_reward + right_reward + backward_reward;
+        let current_state = &self.world.read_state(x,y).unwrap().state;
+
+        return self.gama*(forward_reward + left_reward + right_reward + backward_reward) + calculate_cost_of_move(current_state);
     }
 
     fn evaluate_field(self: &Markov, state: &Field, x: usize, y: usize) -> Field {
